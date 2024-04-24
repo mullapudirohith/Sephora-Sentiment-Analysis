@@ -220,6 +220,7 @@ products_df.count()
 import time
 import json
 import re
+from io import StringIO
 
 
 def remove_text_in_parentheses(input_string):
@@ -307,67 +308,118 @@ else:
 # In[16]:
 
 
+products_df.info()
+
+
+# In[17]:
+
+
+products_df = products_df[["brand_name", "product_name", "product_id", "product_link", "chemicals_list"]]
+
+
+# In[18]:
+
+
+products_df.count()
+
+
+# In[19]:
+
+
+products_df = products_df[products_df['chemicals_list'].apply(lambda x: len(eval(x)) > 0)]
+
+
+# In[20]:
+
+
+products_df.count()
+
+
+# In[21]:
+
+
 from collections import Counter
 import ast
 
 
 common_chemicals_list = []
 
-
 for chemicals_list in products_df['chemicals_list']:
     common_chemicals_list.extend(ast.literal_eval(chemicals_list))
 
 chemicals_frequency = dict(Counter(common_chemicals_list).most_common())
 
-print("Total unique chemicals:", len(chemicals_frequency.values()))
+print("Total unique chemicals:", len(chemicals_frequency.keys()))
 
-
-high_frequency_chemicals = 0
+high_frequency_chemicals_list = []
 for chemical in chemicals_frequency.keys():
     if chemicals_frequency[chemical] > 15:
-        high_frequency_chemicals += 1
-
-
-print("Chemicals occurring in more than 15 products: ", high_frequency_chemicals)
-
-
-# In[17]:
-
-
-products_df.info()
-
-
-# In[18]:
-
-
-products_df = products_df[["brand_name", "product_name", "product_id", "product_link", "chemicals_list"]]
-
-
-# In[19]:
-
-
-products_df.count()
-
-
-# In[20]:
-
-
-products_df = products_df[products_df['chemicals_list'].apply(lambda x: len(eval(x)) > 0)]
-
-
-# In[21]:
-
-
-products_df.count()
+        high_frequency_chemicals_list.append(chemical)
 
 
 # In[22]:
 
 
-products_df.to_csv("../data/products.csv")
+print("Chemicals that occur in more than 15 products: ")
+for high_frequency_chemical in high_frequency_chemicals_list:
+    print(high_frequency_chemical)
+print("Total High Frequency chemicals: ", len(high_frequency_chemicals_list))
 
 
-# In[22]:
+# In[23]:
+
+
+from ast import literal_eval
+
+
+products_df['chemicals_list'] = products_df['chemicals_list'].apply(literal_eval)
+
+chemical_counts = pd.Series([chemical for sublist in products_df['chemicals_list'] for chemical in sublist]).value_counts()
+
+frequent_chemicals = chemical_counts[chemical_counts > 15].index.tolist()
+filtered_chemicals_list = products_df['chemicals_list'].apply(lambda x: [chemical for chemical in x if chemical in frequent_chemicals]).tolist()
+
+products_df['filtered_chemicals'] = filtered_chemicals_list
+
+print(filtered_chemicals_list)
+
+filtered_products_df = products_df[["brand_name", "product_name", "product_id", "filtered_chemicals"]]
+filtered_products_df.to_csv('../data/filtered_products.csv', index=False)
+
+
+# In[24]:
+
+
+unique_chemicals = set(chem for sublist in filtered_products_df['filtered_chemicals'] for chem in sublist)
+
+for chemical in unique_chemicals:
+    filtered_products_df[chemical] = 0
+
+for index, row in filtered_products_df.iterrows():
+    chemicals = row['filtered_chemicals']
+    for chem in chemicals:
+        filtered_products_df.at[index, chem] = 1
+
+
+# In[27]:
+
+
+filtered_products_df.head()
+
+
+# In[28]:
+
+
+encoded_df = filtered_products_df.drop(columns=["brand_name", "product_name", "filtered_chemicals"], axis=1)
+
+
+# In[29]:
+
+
+encoded_df.head()
+
+
+# In[ ]:
 
 
 
