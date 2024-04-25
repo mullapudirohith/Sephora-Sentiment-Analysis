@@ -3,3 +3,6 @@ bs4
 requests
 jupyter
 gdown
+nltk
+matplotlib
+scikit-learn

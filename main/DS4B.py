@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[82]:
 
 
 get_ipython().run_line_magic('pip', "install -r '../requirements.txt'")
 
 
-# In[2]:
+# In[83]:
 
 
 import shutil
@@ -54,7 +54,7 @@ else:
     
 
 
-# In[3]:
+# In[84]:
 
 
 import requests
@@ -87,7 +87,7 @@ else:
     print("Extracted brand links found at /data/brand_links.txt, proceeding with locally saved file. To re-extract the brand links, delete the file and run the cell again")
 
 
-# In[4]:
+# In[85]:
 
 
 import json
@@ -146,7 +146,7 @@ else:
     print("Extracted product links found at /data/product_links.csv, proceeding with locally saved file. To re-extract the product links, delete the file and run the cell again")
 
 
-# In[5]:
+# In[86]:
 
 
 reviews = []
@@ -155,31 +155,31 @@ for file in files_to_check:
 reviews_df = pd.concat(reviews, ignore_index=True)
 
 
-# In[6]:
+# In[87]:
 
 
 reviews_df.head()
 
 
-# In[7]:
+# In[88]:
 
 
 reviews_df.describe()
 
 
-# In[8]:
+# In[89]:
 
 
 product_id_list = reviews_df['product_id'].unique()
 
 
-# In[9]:
+# In[90]:
 
 
 len(product_id_list)
 
 
-# In[10]:
+# In[91]:
 
 
 common_products = []
@@ -190,37 +190,36 @@ for product in product_ids:
 print("There are " +str(len(common_products)) + " common products")
 
 
-# In[11]:
+# In[92]:
 
 
 reviews_df = reviews_df[reviews_df['product_id'].isin(common_products)]
 
 
-# In[12]:
+# In[93]:
 
 
 len(reviews_df['product_id'].unique())
 
 
-# In[13]:
+# In[94]:
 
 
 products_df = products_df[products_df['product_id'].isin(common_products)]
 
 
-# In[14]:
+# In[95]:
 
 
 products_df.count()
 
 
-# In[15]:
+# In[96]:
 
 
 import time
 import json
 import re
-from io import StringIO
 
 
 def remove_text_in_parentheses(input_string):
@@ -305,37 +304,37 @@ else:
     print("Extracted chemicals in products found at /data/products.csv, proceeding with locally saved file. To re-extract the product links, delete the file and run the cell again")
 
 
-# In[16]:
+# In[97]:
 
 
 products_df.info()
 
 
-# In[17]:
+# In[98]:
 
 
 products_df = products_df[["brand_name", "product_name", "product_id", "product_link", "chemicals_list"]]
 
 
-# In[18]:
+# In[99]:
 
 
 products_df.count()
 
 
-# In[19]:
+# In[100]:
 
 
 products_df = products_df[products_df['chemicals_list'].apply(lambda x: len(eval(x)) > 0)]
 
 
-# In[20]:
+# In[101]:
 
 
 products_df.count()
 
 
-# In[21]:
+# In[102]:
 
 
 from collections import Counter
@@ -357,7 +356,7 @@ for chemical in chemicals_frequency.keys():
         high_frequency_chemicals_list.append(chemical)
 
 
-# In[22]:
+# In[103]:
 
 
 print("Chemicals that occur in more than 15 products: ")
@@ -366,7 +365,7 @@ for high_frequency_chemical in high_frequency_chemicals_list:
 print("Total High Frequency chemicals: ", len(high_frequency_chemicals_list))
 
 
-# In[23]:
+# In[104]:
 
 
 from ast import literal_eval
@@ -387,7 +386,7 @@ filtered_products_df = products_df[["brand_name", "product_name", "product_id", 
 filtered_products_df.to_csv('../data/filtered_products.csv', index=False)
 
 
-# In[24]:
+# In[105]:
 
 
 unique_chemicals = set(chem for sublist in filtered_products_df['filtered_chemicals'] for chem in sublist)
@@ -401,22 +400,165 @@ for index, row in filtered_products_df.iterrows():
         filtered_products_df.at[index, chem] = 1
 
 
-# In[27]:
+# In[106]:
 
 
 filtered_products_df.head()
 
 
-# In[28]:
+# In[107]:
 
 
 encoded_df = filtered_products_df.drop(columns=["brand_name", "product_name", "filtered_chemicals"], axis=1)
 
 
-# In[29]:
+# In[108]:
 
 
 encoded_df.head()
+
+
+# In[109]:
+
+
+encoded_df.to_csv("../data/encoded_chemicals.csv")
+
+
+# In[110]:
+
+
+products_with_chemicals = encoded_df["product_id"].tolist()
+
+reviews_df = reviews_df[reviews_df['product_id'].isin(products_with_chemicals)]
+
+print("Total unique products in reviews after dropping non common products", len(reviews_df['product_id'].unique()))
+
+reviews_df['review_title'] = reviews_df['review_title'].fillna('').astype(str)
+reviews_df['review_text'] = reviews_df['review_text'].fillna('').astype(str)
+
+sentiment_df = pd.DataFrame()
+sentiment_df['full_review'] = reviews_df['review_title'] + ": " + reviews_df['review_text']
+sentiment_df['product_id'] = reviews_df['product_id']
+
+
+# In[111]:
+
+
+sentiment_df.head()
+
+
+# In[112]:
+
+
+import nltk
+from nltk.sentiment import SentimentIntensityAnalyzer
+import ssl
+
+try:
+    _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
+else:
+    ssl._create_default_https_context = _create_unverified_https_context
+
+nltk.download('vader_lexicon')
+
+sia = SentimentIntensityAnalyzer()
+
+def get_sentiment(text):
+    return sia.polarity_scores(text)['compound']
+
+
+sentiment_df['sentiment_score'] = sentiment_df['full_review'].apply(get_sentiment)
+
+
+# In[113]:
+
+
+sentiment_df.head()
+
+
+# In[114]:
+
+
+import matplotlib.pyplot as plt
+
+# Histogram of weighted sentiment scores
+sentiment_df['sentiment_score'].hist(bins=50)
+plt.title('Distribution of  Sentiment Scores')
+plt.xlabel('Sentiment Score')
+plt.ylabel('Frequency')
+plt.show()
+
+sentiment_df = sentiment_df.groupby('product_id')['sentiment_score'].mean().reset_index()
+sentiment_df.columns = ['product_id', 'average_sentiment']
+
+encoded_df = encoded_df.merge(sentiment_df, on='product_id', how='left')
+
+
+# In[115]:
+
+
+encoded_df.head()
+
+
+# In[116]:
+
+
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+
+
+X = encoded_df.drop(['product_id', 'average_sentiment'], axis=1)
+y = encoded_df['average_sentiment']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_test)
+
+# Calculate the mean squared error
+mse = mean_squared_error(y_test, y_pred)
+print("Linear Regression Mean Squared Error:", mse)
+
+
+# In[117]:
+
+
+from sklearn.ensemble import RandomForestRegressor
+
+
+rf_model = RandomForestRegressor()
+rf_model.fit(X_train, y_train)
+
+
+y_pred_rf = rf_model.predict(X_test)
+
+
+mse_rf = mean_squared_error(y_test, y_pred_rf)
+print("Random Forest Mean Squared Error:", mse_rf)
+
+
+# In[118]:
+
+
+rf_model.fit(X, y)
+
+rf_feature_importances = rf_model.feature_importances_
+feature_names = X.columns
+
+plt.figure(figsize=(20, 40))  # Adjust figure size as needed
+plt.barh(feature_names, rf_feature_importances)
+plt.xlabel('Feature Importance')
+plt.ylabel('Chemical')
+plt.title('Random Forest Feature Importance')
+plt.tight_layout()  # Adjust layout to prevent overlapping labels
+plt.savefig('../data/RF_Feature_Importance.png', dpi=300)  # Save figure with higher resolution
+plt.show()
 
 
 # In[ ]:
