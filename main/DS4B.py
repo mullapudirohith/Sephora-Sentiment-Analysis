@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[82]:
+# In[1]:
 
 
 get_ipython().run_line_magic('pip', "install -r '../requirements.txt'")
 
 
-# In[83]:
+# In[2]:
 
 
 import shutil
@@ -54,7 +54,7 @@ else:
     
 
 
-# In[84]:
+# In[3]:
 
 
 import requests
@@ -87,7 +87,7 @@ else:
     print("Extracted brand links found at /data/brand_links.txt, proceeding with locally saved file. To re-extract the brand links, delete the file and run the cell again")
 
 
-# In[85]:
+# In[4]:
 
 
 import json
@@ -146,7 +146,7 @@ else:
     print("Extracted product links found at /data/product_links.csv, proceeding with locally saved file. To re-extract the product links, delete the file and run the cell again")
 
 
-# In[86]:
+# In[5]:
 
 
 reviews = []
@@ -155,31 +155,31 @@ for file in files_to_check:
 reviews_df = pd.concat(reviews, ignore_index=True)
 
 
-# In[87]:
+# In[6]:
 
 
 reviews_df.head()
 
 
-# In[88]:
+# In[7]:
 
 
 reviews_df.describe()
 
 
-# In[89]:
+# In[8]:
 
 
 product_id_list = reviews_df['product_id'].unique()
 
 
-# In[90]:
+# In[9]:
 
 
 len(product_id_list)
 
 
-# In[91]:
+# In[10]:
 
 
 common_products = []
@@ -190,36 +190,35 @@ for product in product_ids:
 print("There are " +str(len(common_products)) + " common products")
 
 
-# In[92]:
+# In[11]:
 
 
 reviews_df = reviews_df[reviews_df['product_id'].isin(common_products)]
 
 
-# In[93]:
+# In[12]:
 
 
 len(reviews_df['product_id'].unique())
 
 
-# In[94]:
+# In[13]:
 
 
 products_df = products_df[products_df['product_id'].isin(common_products)]
 
 
-# In[95]:
+# In[14]:
 
 
 products_df.count()
 
 
-# In[96]:
+# In[15]:
 
 
 import time
 import json
-import re
 
 
 def remove_text_in_parentheses(input_string):
@@ -304,37 +303,37 @@ else:
     print("Extracted chemicals in products found at /data/products.csv, proceeding with locally saved file. To re-extract the product links, delete the file and run the cell again")
 
 
-# In[97]:
+# In[16]:
 
 
 products_df.info()
 
 
-# In[98]:
+# In[17]:
 
 
 products_df = products_df[["brand_name", "product_name", "product_id", "product_link", "chemicals_list"]]
 
 
-# In[99]:
+# In[18]:
 
 
 products_df.count()
 
 
-# In[100]:
+# In[19]:
 
 
 products_df = products_df[products_df['chemicals_list'].apply(lambda x: len(eval(x)) > 0)]
 
 
-# In[101]:
+# In[20]:
 
 
 products_df.count()
 
 
-# In[102]:
+# In[21]:
 
 
 from collections import Counter
@@ -356,7 +355,60 @@ for chemical in chemicals_frequency.keys():
         high_frequency_chemicals_list.append(chemical)
 
 
-# In[103]:
+# In[22]:
+
+
+import re
+
+
+def get_iupac_name(chemical_name):
+    try:
+        url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{chemical_name}/json"
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            iupac_name = data['PC_Compounds'][0]['props'][10]['value']['sval']
+            return iupac_name
+        else:
+            return None
+    except Exception as ex:
+        print(f"Error: {str(ex)}")
+        return None
+
+
+def identify_functional_groups(chemical_name):
+    if not chemical_name:
+        return "Other"
+    iupac_name = get_iupac_name(chemical_name)
+    if not iupac_name:
+        return "Other"
+    alcohols = re.compile(r"^(.*)ol$")
+    aldehydes = re.compile(r"^(.*)al$")
+    ketones = re.compile(r"^(.*)one$")
+    carboxylic_acids = re.compile(r"^(.*)oic acid$")
+    amines = re.compile(r"^(.*)amine$")
+    amides = re.compile(r"^(.*)amide$")
+    esters = re.compile(r"(.*) (.*)ate$")
+    
+    if alcohols.match(iupac_name):
+        return "Alcohol"
+    elif aldehydes.match(iupac_name):
+        return "Aldehyde"
+    elif ketones.match(iupac_name):
+        return "Ketone"
+    elif carboxylic_acids.match(iupac_name):
+        return "Carboxylic Acid"
+    elif amines.match(iupac_name):
+        return "Amine"
+    elif amides.match(iupac_name):
+        return "Amide"
+    elif esters.match(iupac_name):
+        return "Ester"
+    else:
+        return "Other"
+
+
+# In[23]:
 
 
 print("Chemicals that occur in more than 15 products: ")
@@ -365,199 +417,383 @@ for high_frequency_chemical in high_frequency_chemicals_list:
 print("Total High Frequency chemicals: ", len(high_frequency_chemicals_list))
 
 
-# In[104]:
+# In[24]:
+
+
+products_df.head()
+
+
+# In[25]:
 
 
 from ast import literal_eval
 
-
-products_df['chemicals_list'] = products_df['chemicals_list'].apply(literal_eval)
-
-chemical_counts = pd.Series([chemical for sublist in products_df['chemicals_list'] for chemical in sublist]).value_counts()
-
-frequent_chemicals = chemical_counts[chemical_counts > 15].index.tolist()
-filtered_chemicals_list = products_df['chemicals_list'].apply(lambda x: [chemical for chemical in x if chemical in frequent_chemicals]).tolist()
-
-products_df['filtered_chemicals'] = filtered_chemicals_list
-
-print(filtered_chemicals_list)
-
-filtered_products_df = products_df[["brand_name", "product_name", "product_id", "filtered_chemicals"]]
-filtered_products_df.to_csv('../data/filtered_products.csv', index=False)
+import nltk
+from nltk.sentiment import SentimentIntensityAnalyzer
+import ssl
+import tqdm
 
 
-# In[105]:
+if not os.path.exists("../data/fit_model.csv"):
+    
+    functional_group_chemical = {}
+    for chemical in high_frequency_chemicals_list:
+        functional_group_chemical[chemical] = identify_functional_groups(chemical)
+        
+    def get_functional_group_chemical(chemical):
+        return functional_group_chemical.get(chemical, Exception("Weird Error!, extra chemical: ", chemical))
+
+    products_df['chemicals_list'] = products_df['chemicals_list'].apply(literal_eval)
+    
+    chemical_counts = pd.Series([chemical for sublist in products_df['chemicals_list'] for chemical in sublist]).value_counts()
+    
+    frequent_chemicals = chemical_counts[chemical_counts > 15].index.tolist()
+    filtered_chemicals_list = products_df['chemicals_list'].apply(lambda x: [chemical for chemical in x if chemical in frequent_chemicals]).tolist()
+    
+    
+    products_df['filtered_chemicals'] = filtered_chemicals_list
+    products_df['functional_groups'] = products_df['filtered_chemicals'].apply(lambda x: [get_functional_group_chemical(chemical) for chemical in x])
+    
+    print(products_df['functional_groups'])
+    
+    filtered_products_df = products_df[["brand_name", "product_name", "product_id", "filtered_chemicals", "functional_groups"]]
+    
+    
+    
+    unique_functional_groups = set(chem for sublist in filtered_products_df['functional_groups'] for chem in sublist)
+    
+    for group in unique_functional_groups:
+        filtered_products_df[group] = 0
+    
+    for index, row in filtered_products_df.iterrows():
+        groups = row['functional_groups']
+        for group in groups:
+            filtered_products_df.at[index, group] = 1
+    
+    encoded_df = filtered_products_df.drop(columns=["brand_name", "product_name", "filtered_chemicals", "functional_groups"], axis=1)
+    
+    
+    products_with_chemicals = encoded_df["product_id"].tolist()
+    
+    reviews_df = reviews_df[reviews_df['product_id'].isin(products_with_chemicals)]
+    
+    print("Total unique products in reviews after dropping non common products", len(reviews_df['product_id'].unique()))
+    
+    reviews_df['review_title'] = reviews_df['review_title'].fillna('').astype(str)
+    reviews_df['review_text'] = reviews_df['review_text'].fillna('').astype(str)
+    
+    sentiment_df = pd.DataFrame()
+    sentiment_df['full_review'] = reviews_df['review_title'] + ": " + reviews_df['review_text']
+    sentiment_df['product_id'] = reviews_df['product_id']
+    
+    
+    try:
+        _create_unverified_https_context = ssl._create_unverified_context
+    except AttributeError:
+        pass
+    else:
+        ssl._create_default_https_context = _create_unverified_https_context
+    
+    nltk.download('vader_lexicon')
+    
+    sia = SentimentIntensityAnalyzer()
+    
+    def get_sentiment(text, pbar):
+        pbar.update(1)
+        return sia.polarity_scores(text)['compound']
+    
+    total_rows = len(sentiment_df)
+    
+    with tqdm.tqdm(total=total_rows) as pbar:
+        sentiment_df['sentiment_score'] = sentiment_df['full_review'].apply(lambda x: get_sentiment(x, pbar))
+        
+    
+    sentiment_df = sentiment_df.groupby('product_id')['sentiment_score'].mean().reset_index()  
+    encoded_df = encoded_df.merge(sentiment_df, on='product_id', how='left')
+    encoded_df.to_csv("../data/fit_model.csv")
+    
+else:
+    print("Encoded DF already exists at data/fit_model.csv, so skipping this step")
+    encoded_df = pd.read_csv("../data/fit_model.csv")
 
 
-unique_chemicals = set(chem for sublist in filtered_products_df['filtered_chemicals'] for chem in sublist)
-
-for chemical in unique_chemicals:
-    filtered_products_df[chemical] = 0
-
-for index, row in filtered_products_df.iterrows():
-    chemicals = row['filtered_chemicals']
-    for chem in chemicals:
-        filtered_products_df.at[index, chem] = 1
-
-
-# In[106]:
-
-
-filtered_products_df.head()
-
-
-# In[107]:
-
-
-encoded_df = filtered_products_df.drop(columns=["brand_name", "product_name", "filtered_chemicals"], axis=1)
-
-
-# In[108]:
+# In[26]:
 
 
 encoded_df.head()
 
 
-# In[109]:
-
-
-encoded_df.to_csv("../data/encoded_chemicals.csv")
-
-
-# In[110]:
-
-
-products_with_chemicals = encoded_df["product_id"].tolist()
-
-reviews_df = reviews_df[reviews_df['product_id'].isin(products_with_chemicals)]
-
-print("Total unique products in reviews after dropping non common products", len(reviews_df['product_id'].unique()))
-
-reviews_df['review_title'] = reviews_df['review_title'].fillna('').astype(str)
-reviews_df['review_text'] = reviews_df['review_text'].fillna('').astype(str)
-
-sentiment_df = pd.DataFrame()
-sentiment_df['full_review'] = reviews_df['review_title'] + ": " + reviews_df['review_text']
-sentiment_df['product_id'] = reviews_df['product_id']
-
-
-# In[111]:
-
-
-sentiment_df.head()
-
-
-# In[112]:
-
-
-import nltk
-from nltk.sentiment import SentimentIntensityAnalyzer
-import ssl
-
-try:
-    _create_unverified_https_context = ssl._create_unverified_context
-except AttributeError:
-    pass
-else:
-    ssl._create_default_https_context = _create_unverified_https_context
-
-nltk.download('vader_lexicon')
-
-sia = SentimentIntensityAnalyzer()
-
-def get_sentiment(text):
-    return sia.polarity_scores(text)['compound']
-
-
-sentiment_df['sentiment_score'] = sentiment_df['full_review'].apply(get_sentiment)
-
-
-# In[113]:
-
-
-sentiment_df.head()
-
-
-# In[114]:
+# In[27]:
 
 
 import matplotlib.pyplot as plt
 
-# Histogram of weighted sentiment scores
-sentiment_df['sentiment_score'].hist(bins=50)
+
+encoded_df['sentiment_score'].hist(bins=50)
 plt.title('Distribution of  Sentiment Scores')
 plt.xlabel('Sentiment Score')
 plt.ylabel('Frequency')
 plt.show()
 
-sentiment_df = sentiment_df.groupby('product_id')['sentiment_score'].mean().reset_index()
-sentiment_df.columns = ['product_id', 'average_sentiment']
 
-encoded_df = encoded_df.merge(sentiment_df, on='product_id', how='left')
+# In[28]:
 
 
-# In[115]:
+X = encoded_df.drop(['product_id','sentiment_score'], axis=1)
+y = encoded_df['sentiment_score']
 
 
-encoded_df.head()
+# In[29]:
 
 
-# In[116]:
+import numpy as np
+from sklearn.metrics import mean_squared_error
+
+y_25th_percentile = np.percentile(y, 25)
+y_pred_baseline = np.full_like(y, y_25th_percentile)
+mse_baseline = mean_squared_error(y, y_pred_baseline)
+print(f'Baseline Model MSE: {mse_baseline}')
+
+
+# In[30]:
 
 
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import Ridge
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
+
+models = {}
+y_pred_linear = LinearRegression().fit(X_train, y_train).predict(X_test)
+y_pred_rf = RandomForestRegressor(max_depth=5, max_leaf_nodes=10).fit(X_train, y_train).predict(X_test)
+y_pred_ridge = Ridge(alpha=1.0).fit(X_train, y_train).predict(X_test)
+
+models["linear"] = y_pred_linear
+models["Random Forest"] = y_pred_rf
+models["Ridge"] = y_pred_ridge
+
+for model in models.keys():
+    print(model, "MSE: ",mean_squared_error(y_test, models[model]))
 
 
-X = encoded_df.drop(['product_id', 'average_sentiment'], axis=1)
-y = encoded_df['average_sentiment']
+# In[31]:
 
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+
+rf_model = RandomForestRegressor(max_depth=5, max_leaf_nodes=10, random_state=42)
+rf_model.fit(X_train, y_train)
+
+feature_importances = rf_model.feature_importances_
+
+feature_names = X.columns
+
+sorted_indices = feature_importances.argsort()[::-1]
+sorted_feature_importances = feature_importances[sorted_indices]
+sorted_feature_names = feature_names[sorted_indices]
+
+
+plt.figure(figsize=(10, 6))
+sns.barplot(x=sorted_feature_importances, y=sorted_feature_names, palette='viridis')
+plt.xlabel('Feature Importance')
+plt.ylabel('Feature')
+plt.title('Random Forest Feature Importances')
+plt.show()
+
+
+# In[133]:
+
+
+import matplotlib.pyplot as plt
+
+
+for model_name, y_pred in models.items():
+    plt.figure(figsize=(10, 6))
+    plt.plot(y_test.values, label='Actual Sentiment', color='blue')
+    plt.plot(y_pred, label='Predicted Sentiment', color='red')
+    plt.xlabel('Data Point')
+    plt.ylabel('Sentiment')
+    plt.title(f'Actual vs Predicted Sentiment - {model_name}')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+
+# In[34]:
+
+
+def map_sentiment_category(sentiment):
+    if sentiment <= 0.60:
+        return 0
+    elif sentiment <= 0.75:
+        return 1
+    elif sentiment <= 0.8:
+        return 2
+    else:
+        return 3
+
+labels = ['Negative', 'Neutral', 'Positive', 'Very Positive']
+encoded_df['sentiment_category'] = encoded_df['sentiment_score'].apply(map_sentiment_category)
+
+
+# In[35]:
+
+
+X = encoded_df.drop(columns=["sentiment_category", 'product_id', 'sentiment_score'])
+y = encoded_df["sentiment_category"]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 
-model = LinearRegression()
-model.fit(X_train, y_train)
-
-y_pred = model.predict(X_test)
-
-# Calculate the mean squared error
-mse = mean_squared_error(y_test, y_pred)
-print("Linear Regression Mean Squared Error:", mse)
+# In[36]:
 
 
-# In[117]:
+from sklearn.dummy import DummyClassifier
+
+dummy_classifier = DummyClassifier(strategy="most_frequent")
+dummy_classifier.fit(X_train, y_train)
+dummy_predictions = dummy_classifier.predict(X_test)
+dummy_accuracy = dummy_classifier.score(X_test, y_test)
+print("Baseline Accuracy:", dummy_accuracy)
 
 
-from sklearn.ensemble import RandomForestRegressor
+# In[37]:
 
 
-rf_model = RandomForestRegressor()
-rf_model.fit(X_train, y_train)
+from sklearn.linear_model import LogisticRegression
 
 
-y_pred_rf = rf_model.predict(X_test)
+logistic_model = LogisticRegression(max_iter=10000)
+
+logistic_model.fit(X_train, y_train)
+
+predictions = logistic_model.predict(X_test)
+
+# Evaluate the model
+accuracy = logistic_model.score(X_test, y_test)
+print("Accuracy:", accuracy)
 
 
-mse_rf = mean_squared_error(y_test, y_pred_rf)
-print("Random Forest Mean Squared Error:", mse_rf)
+# In[38]:
 
 
-# In[118]:
+from sklearn.tree import DecisionTreeClassifier
 
 
-rf_model.fit(X, y)
+dt_classifier = DecisionTreeClassifier(max_depth=5, max_leaf_nodes=10)
+dt_classifier.fit(X_train, y_train)
+dt_predictions = dt_classifier.predict(X_test)
 
-rf_feature_importances = rf_model.feature_importances_
-feature_names = X.columns
+dt_accuracy = dt_classifier.score(X_test, y_test)
+print("Decision Tree Classifier Accuracy:", dt_accuracy)
 
-plt.figure(figsize=(20, 40))  # Adjust figure size as needed
-plt.barh(feature_names, rf_feature_importances)
-plt.xlabel('Feature Importance')
-plt.ylabel('Chemical')
-plt.title('Random Forest Feature Importance')
-plt.tight_layout()  # Adjust layout to prevent overlapping labels
-plt.savefig('../data/RF_Feature_Importance.png', dpi=300)  # Save figure with higher resolution
+
+# In[39]:
+
+
+from sklearn.ensemble import RandomForestClassifier
+from sklearn import tree
+import matplotlib.pyplot as plt
+
+
+max_depth = 11
+max_leaf_nodes = 21
+best_accuracy = 0
+best_depth = 0
+best_leaf_nodes = 0
+
+for depth in range(3, max_depth):
+    for leaf_nodes in range(3, max_leaf_nodes):
+        rf_classifier = RandomForestClassifier(max_depth=depth, max_leaf_nodes=leaf_nodes)
+        rf_classifier.fit(X_train, y_train)
+        rf_accuracy = rf_classifier.score(X_test, y_test)
+        if rf_accuracy > best_accuracy:
+            best_accuracy = rf_accuracy
+            best_depth = depth
+            best_leaf_nodes = leaf_nodes
+
+print("Best Random Forest Classifier Accuracy:", best_accuracy)
+print("Best Depth:", best_depth)
+print("Best Leaf Nodes:", best_leaf_nodes)
+
+best_model = RandomForestClassifier(max_depth=best_depth, max_leaf_nodes=best_leaf_nodes)
+best_model.fit(X_train, y_train)
+
+tree_to_visualize = best_model.estimators_[0]
+plt.figure(figsize=(10, 8))
+tree.plot_tree(tree_to_visualize, class_names=labels, filled=True)
+plt.show()
+
+
+# In[40]:
+
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
+
+
+conf_matrix = confusion_matrix(y, best_model.predict(X))
+
+plt.figure(figsize=(8, 6))
+sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues')
+
+
+plt.xlabel('Predicted Label')
+plt.ylabel('True Label')
+plt.xticks(ticks=np.arange(len(conf_matrix))+0.5, labels=labels)
+plt.yticks(ticks=np.arange(len(conf_matrix))+0.5, labels=labels)
+plt.title('Confusion Matrix')
+
+plt.show()
+
+
+# In[41]:
+
+
+from sklearn.preprocessing import label_binarize
+from sklearn.metrics import roc_curve, auc
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+y_test_binarized = label_binarize(y_test, classes=np.unique(y_test))
+
+logistic_probabilities = logistic_model.predict_proba(X_test)
+logistic_fpr, logistic_tpr, _ = roc_curve(y_test_binarized.ravel(), logistic_probabilities.ravel())
+logistic_auc = auc(logistic_fpr, logistic_tpr)
+
+
+dt_probabilities = dt_classifier.predict_proba(X_test)
+dt_fpr, dt_tpr, _ = roc_curve(y_test_binarized.ravel(), dt_probabilities.ravel())
+dt_auc = auc(dt_fpr, dt_tpr)
+
+best_model_probabilities = best_model.predict_proba(X_test)
+best_model_fpr, best_model_tpr, _ = roc_curve(y_test_binarized.ravel(), best_model_probabilities.ravel())
+best_model_auc = auc(best_model_fpr, best_model_tpr)
+
+
+dummy_probabilities = dummy_classifier.predict_proba(X_test)
+dummy_fpr, dummy_tpr, _ = roc_curve(y_test_binarized.ravel(), dummy_probabilities.ravel())
+dummy_auc = auc(dummy_fpr, dummy_tpr)
+
+
+plt.figure(figsize=(10, 8))
+plt.plot(logistic_fpr, logistic_tpr, color='blue', lw=2, label='Logistic Regression')
+plt.plot(dt_fpr, dt_tpr, color='yellow', lw=2, label='Decision Tree')
+plt.plot(best_model_fpr, best_model_tpr, color='red', lw=2, label='Random Forest')
+
+plt.plot([0, 1], [0, 1], color='black', lw=1, linestyle='--')
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('ROC Curve')
+plt.legend(loc='lower right')
 plt.show()
 
 
