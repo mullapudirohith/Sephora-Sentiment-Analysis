@@ -24,6 +24,7 @@ Below is the dataframe, that we feed into the model, product_id is dropped, X wa
 <p align="center">
 <img src="https://github.com/mullapudirohith/Sephora-Sentiment-Analysis/assets/53976690/849c8a31-6d39-4532-b327-fbc1867d8900" alt="image">
 </p>
+
 **Feature Engineering:** <br>
 * Frequency-Based Selection: <br>
 Selected features based on the chemical ingredients' presence in various
@@ -36,6 +37,7 @@ based on their functional groups. This classification
 provided additional context on the types of
 compounds present, allowing us to explore their
 potential relationships with customer satisfaction.
+
 <p align="center">
 <img src="https://github.com/mullapudirohith/Sephora-Sentiment-Analysis/assets/53976690/8f25aff3-07de-4fab-bec7-6ab8e4fd15ca" alt="image" style="text-align: center; width: 600px; height: 500px;">
 </p>
