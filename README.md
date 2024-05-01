@@ -105,8 +105,8 @@ Follow this step if you are running the notebook locally, to create and activate
 
 
 ### Performance: 
-<img src="https://github.com/mullapudirohith/Sephora-Sentiment-Analysis/assets/53976690/02fd278c-38ef-459a-91c3-c69cf9124220" alt="image" style="width: 500px; height: 500px">
-<img src="https://github.com/mullapudirohith/Sephora-Sentiment-Analysis/assets/53976690/2937b562-0758-43f4-8032-b05ca77c604b" alt="image" style="width: 500px; height: 500px">
+<img src="https://github.com/mullapudirohith/Sephora-Sentiment-Analysis/assets/53976690/02fd278c-38ef-459a-91c3-c69cf9124220" alt="image" >
+<img src="https://github.com/mullapudirohith/Sephora-Sentiment-Analysis/assets/53976690/2937b562-0758-43f4-8032-b05ca77c604b" alt="image">
 
 
 
