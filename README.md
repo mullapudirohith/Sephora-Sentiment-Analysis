@@ -121,6 +121,6 @@ Follow this step if you are running the notebook locally, to create and activate
 1️⃣. [Rohith Mullapudi](https://github.com/mullapudirohith)<br>
 2️⃣. [Aniket Verma](https://github.com/aniketverma-7)<br>
 3️⃣. [Atman Wagle](https://github.com/atmanwagle)<br>
-4️⃣. [Kareena Parwani]()<br>
+4️⃣. [Kareena Parwani](https://github.com/kareenaparwani)<br>
 
 
