@@ -83,7 +83,7 @@ Follow this step if you are running the notebook locally, to create and activate
 <tr><th>Regression Model </th><th>Classification Model</th></tr>
 <tr><td>
 
-| Model                   | RMSE   |
+| Model                   | MSE   |
 |-------------------------|--------|
 | MSE Baseline            | 0.0249 |
 | Linear Regression       | 0.0148 |
