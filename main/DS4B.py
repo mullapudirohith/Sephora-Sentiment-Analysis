@@ -798,7 +798,36 @@ plt.show()
 
 
 # In[ ]:
+data = encoded_df
 
+chemical_features = data.columns[2:]
+sentiment_scores = data['average_sentiment']
+
+correlations = data[chemical_features].apply(lambda x: np.corrcoef(x, sentiment_scores)[0, 1])
+correlation_df = pd.DataFrame({'Chemical': chemical_features, 'Correlation': correlations})
+
+top_15_correlations = correlation_df[correlation_df['Correlation'] > 0].head(15)
+plt.figure(figsize=(12, 8))
+plt.barh(top_15_correlations['Chemical'], top_15_correlations['Correlation'], color='purple')
+plt.title('Top 15 Chemicals by Positive Correlation')
+plt.xlabel('Correlation Coefficient')
+plt.ylabel('Chemicals')
+plt.yticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+top_15_negative_correlations = correlation_df[correlation_df['Correlation'] < 0].tail(15)
+plt.figure(figsize=(12, 8))
+plt.barh(top_15_negative_correlations['Chemical'], top_15_negative_correlations['Correlation'], color='blue')
+plt.title('Top 15 Chemicals by Negative Correlation')
+plt.xlabel('Correlation Coefficient')
+plt.ylabel('Chemicals')
+plt.yticks(rotation=45)
+plt.gca().invert_xaxis()
+plt.tight_layout()
+plt.show()
+X = encoded_df.drop(['product_id','sentiment_score'], axis=1)
+y = encoded_df['sentiment_score']
 
 
 
